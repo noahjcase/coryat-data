@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeopardy Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        :root {
+            --blue: #0056b3;
+            --green: #28a745;
+            --red: #dc3545;
+            --yellow: #ffc107;
+            --gray: #f8f9fa;
+            --dark: #333;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--blue) 0%, #0041a8 100%);
+            color: var(--dark);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .timestamp {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--blue);
+            margin: 10px 0;
+        }
+        .stat-card .label {
+            font-size: 0.9em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .charts-section {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 40px;
+        }
+        .chart-container h3 {
+            margin-bottom: 15px;
+            color: var(--dark);
+            font-size: 1.3em;
+        }
+        .chart-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+        .chart-container.half {
+            height: 300px;
+        }
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Jeopardy Dashboard</h1>
+            <p class="timestamp">Last updated: April 17, 2026 at 07:31 PM</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">Games Played</div>
+                <div class="value">2</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Average Coryat</div>
+                <div class="value">$28,100</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Best Coryat</div>
+                <div class="value" style="color: var(--green);">$34,600</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Accuracy</div>
+                <div class="value">60.9%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Daily Double Record</div>
+                <div class="value">3-0</div>
+                <div class="label" style="margin-top: 5px;">100% Win Rate</div>
+            </div>
+        </div>
+
+        <div class="charts-section">
+            <div class="chart-row">
+                <div class="chart-container half">
+                    <h3>Coryat Trend</h3>
+                    <canvas id="coryatChart"></canvas>
+                </div>
+                <div class="chart-container half">
+                    <h3>Accuracy by Round</h3>
+                    <canvas id="roundChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-container half">
+                    <h3>Accuracy by Dollar Value</h3>
+                    <canvas id="valueChart"></canvas>
+                </div>
+                <div class="chart-container half">
+                    <h3>Accuracy by Category</h3>
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>📊 Generated by <a href="https://github.com/noahjcase/coryat" style="color: white;">playj</a></p>
+        </footer>
+    </div>
+
+    <script>
+        const coryatCtx = document.getElementById('coryatChart').getContext('2d');
+        new Chart(coryatCtx, {
+            type: 'line',
+            data: {
+                labels: ["Apr 04, 2019", "Apr 05, 2019"],
+                datasets: [{
+                    label: 'Coryat Score',
+                    data: [34600, 21600],
+                    borderColor: 'var(--blue)',
+                    backgroundColor: 'rgba(0, 86, 179, 0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 5,
+                    pointBackgroundColor: 'var(--blue)',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: false } }
+            }
+        });
+
+        const roundCtx = document.getElementById('roundChart').getContext('2d');
+        const roundData = {"single": {"correct": 34, "total": 60}, "double": {"correct": 36, "total": 60}}
+        const roundLabels = Object.keys(roundData).map(r => r.charAt(0).toUpperCase() + r.slice(1));
+        const roundAccuracy = Object.values(roundData).map(r => r.correct / r.total * 100);
+        new Chart(roundCtx, {
+            type: 'bar',
+            data: {
+                labels: roundLabels,
+                datasets: [{
+                    label: 'Accuracy %',
+                    data: roundAccuracy,
+                    backgroundColor: ['var(--green)', 'var(--blue)'],
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { max: 100, beginAtZero: true } }
+            }
+        });
+
+        const valueCtx = document.getElementById('valueChart').getContext('2d');
+        new Chart(valueCtx, {
+            type: 'bar',
+            data: {
+                labels: ["$200", "$400", "$600", "$800", "$1000", "$1200", "$1600", "$2000"],
+                datasets: [{
+                    label: 'Accuracy %',
+                    data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    backgroundColor: 'var(--blue)',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { max: 100, beginAtZero: true } }
+            }
+        });
+
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ["NATURE STICKS IT TO YOU", "THE HIGHEST CAPITAL CITY", "BALLPARK CUISINE", "U3", "POTPOURRI", "DON'T TREAD ON MEME", "ACCORDING TO THE AUTHOR", "WORLD WAR II", "TRANSPORTATION", "FROM THE GREEK"],
+                datasets: [{
+                    data: [40.0, 100.0, 60.0, 100.0, 40.0, 60.0, 80.0, 40.0, 60.0, 40.0],
+                    backgroundColor: [
+                        'var(--blue)', 'var(--green)', 'var(--yellow)', '#17a2b8', '#6f42c1',
+                        '#e83e8c', '#fd7e14', '#28a745', '#20c997', '#0dcaf0'
+                    ],
+                    borderColor: 'white',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    </script>
+</body>
+</html>
