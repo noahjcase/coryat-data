@@ -35,7 +35,7 @@ def parse_games():
             result = clue["result"]
             if result in ("c", "dc"):
                 coryat += value
-            elif result in ("w", "dw"):
+            elif result in ("x", "dx"):
                 coryat -= value
 
         game_scores[date_str] = coryat
@@ -87,7 +87,7 @@ def calculate_stats(games, game_scores):
                 correct_count += 1
                 game_correct += 1
                 game_answered += 1
-            elif result == "w":
+            elif result == "x":
                 wrong_count += 1
                 game_answered += 1
             elif result == ".":
@@ -97,10 +97,12 @@ def calculate_stats(games, game_scores):
                 dd_correct += 1
                 game_correct += 1
                 game_answered += 1
-            elif result == "dw":
+            elif result == "dx":
                 wrong_count += 1
                 dd_wrong += 1
                 game_answered += 1
+            elif result == "d.":
+                skipped_count += 1
 
             value_accuracy[value]["total"] += 1
             if result in ("c", "dc"):
@@ -114,7 +116,7 @@ def calculate_stats(games, game_scores):
         pct = round(100 * game_correct / game_answered, 1) if game_answered > 0 else 0
         correct_pct_per_game.append(pct)
 
-    # Accuracy excludes skipped and unrevealed per spec: (c + dc) / (c + w + dc + dw)
+    # Accuracy excludes skipped and unrevealed: (c + dc) / (c + x + dc + dx)
     total_answered = correct_count + wrong_count
     best_date = max(game_scores, key=game_scores.get)
 
