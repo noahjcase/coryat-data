@@ -12,12 +12,13 @@ import json
 
 GAMES_DIR = Path("games")
 OUTPUT_FILE = Path("index.html")
+ROLLING_WINDOW = 5
 
 
 def parse_games():
     """Parse all game CSVs and return aggregated stats."""
     games = []
-    game_scores = {}  # date -> coryat score
+    game_scores = {}
 
     for csv_file in sorted(GAMES_DIR.glob("*.csv")):
         date_str = csv_file.stem
@@ -28,20 +29,28 @@ def parse_games():
             for row in reader:
                 clues.append(row)
 
-        # Calculate Coryat for this game
         coryat = 0
         for clue in clues:
             value = int(clue["value"])
             result = clue["result"]
             if result in ("c", "dc"):
                 coryat += value
-            elif result in ("x", "dx"):
+            elif result in ("w", "dw"):
                 coryat -= value
 
         game_scores[date_str] = coryat
         games.append({"date": date_str, "clues": clues, "coryat": coryat})
 
     return games, game_scores
+
+
+def rolling_average(values, window):
+    result = []
+    for i, _ in enumerate(values):
+        start = max(0, i - window + 1)
+        chunk = values[start : i + 1]
+        result.append(round(sum(chunk) / len(chunk), 1))
+    return result
 
 
 def calculate_stats(games, game_scores):
@@ -56,75 +65,77 @@ def calculate_stats(games, game_scores):
     unrevealed_count = 0
     dd_correct = 0
     dd_wrong = 0
-    dd_skipped = 0
-    category_accuracy = defaultdict(lambda: {"correct": 0, "total": 0})
     value_accuracy = defaultdict(lambda: {"correct": 0, "total": 0})
     round_accuracy = defaultdict(lambda: {"correct": 0, "total": 0})
 
+    correct_per_game = []
+    correct_pct_per_game = []
+
     for game in games:
+        game_correct = 0
+        game_answered = 0
         for clue in game["clues"]:
             result = clue["result"]
             value = int(clue["value"])
-            category = clue["category"]
             round_name = clue["round"]
 
-            # Skip unrevealed clues
             if result == "u":
                 unrevealed_count += 1
                 continue
 
-            # Count by result
             if result == "c":
                 correct_count += 1
-            elif result == "x":
+                game_correct += 1
+                game_answered += 1
+            elif result == "w":
                 wrong_count += 1
+                game_answered += 1
             elif result == ".":
                 skipped_count += 1
             elif result == "dc":
                 correct_count += 1
                 dd_correct += 1
-            elif result == "dx":
+                game_correct += 1
+                game_answered += 1
+            elif result == "dw":
                 wrong_count += 1
                 dd_wrong += 1
-            elif result == "d.":
-                skipped_count += 1
-                dd_skipped += 1
+                game_answered += 1
 
-            # Accuracy by category
-            category_accuracy[category]["total"] += 1
-            if result in ("c", "dc"):
-                category_accuracy[category]["correct"] += 1
-
-            # Accuracy by value
             value_accuracy[value]["total"] += 1
             if result in ("c", "dc"):
                 value_accuracy[value]["correct"] += 1
 
-            # Accuracy by round
             round_accuracy[round_name]["total"] += 1
             if result in ("c", "dc"):
                 round_accuracy[round_name]["correct"] += 1
 
-    total_answered = correct_count + wrong_count + skipped_count
-    total_clues = total_answered + unrevealed_count
+        correct_per_game.append(game_correct)
+        pct = round(100 * game_correct / game_answered, 1) if game_answered > 0 else 0
+        correct_pct_per_game.append(pct)
+
+    # Accuracy excludes skipped and unrevealed per spec: (c + dc) / (c + w + dc + dw)
+    total_answered = correct_count + wrong_count
+    best_date = max(game_scores, key=game_scores.get)
 
     stats = {
         "games_played": len(games),
         "avg_coryat": round(sum(coryats) / len(coryats), 0),
         "best_coryat": max(coryats),
+        "best_coryat_date": best_date,
         "worst_coryat": min(coryats),
-        "total_coryat": sum(coryats),
         "correct": correct_count,
         "wrong": wrong_count,
         "skipped": skipped_count,
         "unrevealed": unrevealed_count,
         "accuracy_pct": round(100 * correct_count / total_answered, 1) if total_answered > 0 else 0,
         "dd_record": f"{dd_correct}-{dd_wrong}",
-        "dd_win_pct": round(100 * dd_correct / (dd_correct + dd_wrong), 1) if (dd_correct + dd_wrong) > 0 else 0,
-        "category_accuracy": dict(category_accuracy),
+        "dd_correct_pct": round(100 * dd_correct / (dd_correct + dd_wrong), 1) if (dd_correct + dd_wrong) > 0 else 0,
         "value_accuracy": dict(value_accuracy),
         "round_accuracy": dict(round_accuracy),
         "coryat_history": [game_scores[game["date"]] for game in games],
+        "correct_per_game": correct_per_game,
+        "correct_pct_per_game": correct_pct_per_game,
         "dates": [game["date"] for game in games],
     }
 
@@ -132,11 +143,10 @@ def calculate_stats(games, game_scores):
 
 
 def format_date_for_display(date_str):
-    """Convert YYYYMMDD to readable format."""
     try:
         dt = datetime.strptime(date_str, "%Y%m%d")
         return dt.strftime("%b %d, %Y")
-    except:
+    except Exception:
         return date_str
 
 
@@ -147,36 +157,44 @@ def generate_html(stats):
             "games_played": 0,
             "avg_coryat": 0,
             "best_coryat": 0,
+            "best_coryat_date": "",
             "worst_coryat": 0,
-            "total_coryat": 0,
             "correct": 0,
             "wrong": 0,
             "skipped": 0,
             "unrevealed": 0,
             "accuracy_pct": 0,
             "dd_record": "0-0",
-            "dd_win_pct": 0,
-            "category_accuracy": {},
+            "dd_correct_pct": 0,
             "value_accuracy": {},
             "round_accuracy": {},
             "coryat_history": [],
+            "correct_per_game": [],
+            "correct_pct_per_game": [],
             "dates": [],
         }
 
     dates_formatted = [format_date_for_display(d) for d in stats.get("dates", [])]
-    value_labels = sorted(stats.get("value_accuracy", {}).keys())
-    value_accuracy = [stats["value_accuracy"].get(str(v), {}).get("correct", 0) / max(1, stats["value_accuracy"].get(str(v), {}).get("total", 1)) * 100 for v in value_labels]
+    best_date_formatted = format_date_for_display(stats.get("best_coryat_date", ""))
 
-    category_names = list(stats.get("category_accuracy", {}).keys())
-    category_accuracy = [stats["category_accuracy"][cat].get("correct", 0) / max(1, stats["category_accuracy"][cat].get("total", 1)) * 100 for cat in category_names]
+    coryat_history = stats.get("coryat_history", [])
+    coryat_rolling = rolling_average(coryat_history, ROLLING_WINDOW)
 
-    round_data_json = json.dumps(stats.get('round_accuracy', {}))
+    value_accuracy_raw = stats.get("value_accuracy", {})
+    value_labels = sorted(value_accuracy_raw.keys())
+    value_accuracy_pct = [
+        round(value_accuracy_raw[v]["correct"] / max(1, value_accuracy_raw[v]["total"]) * 100, 1)
+        for v in value_labels
+    ]
+
+    round_data_json = json.dumps(stats.get("round_accuracy", {}))
     value_labels_json = json.dumps([f"${v}" for v in value_labels])
     dates_json = json.dumps(dates_formatted)
-    coryat_history_json = json.dumps(stats.get('coryat_history', []))
-    category_names_json = json.dumps(category_names[:10])
-    category_accuracy_json = json.dumps(category_accuracy[:10])
-    value_accuracy_json = json.dumps(value_accuracy)
+    coryat_history_json = json.dumps(coryat_history)
+    coryat_rolling_json = json.dumps(coryat_rolling)
+    correct_per_game_json = json.dumps(stats.get("correct_per_game", []))
+    correct_pct_per_game_json = json.dumps(stats.get("correct_pct_per_game", []))
+    value_accuracy_json = json.dumps(value_accuracy_pct)
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -249,6 +267,11 @@ def generate_html(stats):
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }}
+        .stat-card .sublabel {{
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 4px;
+        }}
         .charts-section {{
             background: white;
             border-radius: 8px;
@@ -286,7 +309,7 @@ def generate_html(stats):
 <body>
     <div class="container">
         <header>
-            <h1>🎬 Jeopardy Dashboard</h1>
+            <h1>Jeopardy Dashboard</h1>
             <p class="timestamp">Last updated: {datetime.now().strftime("%B %d, %Y at %I:%M %p")}</p>
         </header>
 
@@ -302,27 +325,33 @@ def generate_html(stats):
             <div class="stat-card">
                 <div class="label">Best Coryat</div>
                 <div class="value" style="color: var(--green);">${stats.get('best_coryat', 0):,.0f}</div>
+                <div class="sublabel">{best_date_formatted}</div>
             </div>
             <div class="stat-card">
-                <div class="label">Accuracy</div>
+                <div class="label">All-time Correct %</div>
                 <div class="value">{stats.get('accuracy_pct', 0):.1f}%</div>
             </div>
             <div class="stat-card">
                 <div class="label">Daily Double Record</div>
                 <div class="value">{stats.get('dd_record', '0-0')}</div>
-                <div class="label" style="margin-top: 5px;">{stats.get('dd_win_pct', 0):.0f}% Win Rate</div>
+                <div class="sublabel">{stats.get('dd_correct_pct', 0):.0f}% correct</div>
             </div>
         </div>
 
         <div class="charts-section">
+            <div class="chart-container">
+                <h3>Coryat Over Time</h3>
+                <canvas id="coryatChart"></canvas>
+            </div>
+
             <div class="chart-row">
                 <div class="chart-container half">
-                    <h3>Coryat Trend</h3>
-                    <canvas id="coryatChart"></canvas>
+                    <h3>Number Correct Over Time</h3>
+                    <canvas id="correctCountChart"></canvas>
                 </div>
                 <div class="chart-container half">
-                    <h3>Accuracy by Round</h3>
-                    <canvas id="roundChart"></canvas>
+                    <h3>Correct % Over Time</h3>
+                    <canvas id="correctPctChart"></canvas>
                 </div>
             </div>
 
@@ -332,14 +361,14 @@ def generate_html(stats):
                     <canvas id="valueChart"></canvas>
                 </div>
                 <div class="chart-container half">
-                    <h3>Accuracy by Category</h3>
-                    <canvas id="categoryChart"></canvas>
+                    <h3>Accuracy by Round</h3>
+                    <canvas id="roundChart"></canvas>
                 </div>
             </div>
         </div>
 
         <footer>
-            <p>📊 Generated by <a href="https://github.com/noahjcase/coryat" style="color: white;">playj</a></p>
+            <p>Generated by <a href="https://github.com/noahjcase/coryat" style="color: white;">playj</a></p>
         </footer>
     </div>
 
@@ -349,38 +378,74 @@ def generate_html(stats):
             type: 'line',
             data: {{
                 labels: {dates_json},
+                datasets: [
+                    {{
+                        label: 'Coryat Score',
+                        data: {coryat_history_json},
+                        borderColor: 'rgba(0, 86, 179, 0.4)',
+                        backgroundColor: 'transparent',
+                        tension: 0.2,
+                        pointRadius: 4,
+                        pointBackgroundColor: 'rgba(0, 86, 179, 0.6)',
+                    }},
+                    {{
+                        label: '{ROLLING_WINDOW}-Game Average',
+                        data: {coryat_rolling_json},
+                        borderColor: '#0056b3',
+                        backgroundColor: 'rgba(0, 86, 179, 0.1)',
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 0,
+                        borderWidth: 2.5,
+                    }}
+                ]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{ legend: {{ display: true, position: 'top' }} }},
+                scales: {{ y: {{ beginAtZero: false }} }}
+            }}
+        }});
+
+        const correctCountCtx = document.getElementById('correctCountChart').getContext('2d');
+        new Chart(correctCountCtx, {{
+            type: 'line',
+            data: {{
+                labels: {dates_json},
                 datasets: [{{
-                    label: 'Coryat Score',
-                    data: {coryat_history_json},
-                    borderColor: 'var(--blue)',
-                    backgroundColor: 'rgba(0, 86, 179, 0.1)',
+                    label: 'Correct',
+                    data: {correct_per_game_json},
+                    borderColor: 'var(--green)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
                     tension: 0.3,
                     fill: true,
-                    pointRadius: 5,
-                    pointBackgroundColor: 'var(--blue)',
+                    pointRadius: 4,
+                    pointBackgroundColor: 'var(--green)',
                 }}]
             }},
             options: {{
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {{ legend: {{ display: false }} }},
-                scales: {{ y: {{ beginAtZero: false }} }}
+                scales: {{ y: {{ beginAtZero: true }} }}
             }}
         }});
 
-        const roundCtx = document.getElementById('roundChart').getContext('2d');
-        const roundData = {round_data_json}
-        const roundLabels = Object.keys(roundData).map(r => r.charAt(0).toUpperCase() + r.slice(1));
-        const roundAccuracy = Object.values(roundData).map(r => r.correct / r.total * 100);
-        new Chart(roundCtx, {{
-            type: 'bar',
+        const correctPctCtx = document.getElementById('correctPctChart').getContext('2d');
+        new Chart(correctPctCtx, {{
+            type: 'line',
             data: {{
-                labels: roundLabels,
+                labels: {dates_json},
                 datasets: [{{
-                    label: 'Accuracy %',
-                    data: roundAccuracy,
-                    backgroundColor: ['var(--green)', 'var(--blue)'],
-                    borderRadius: 5
+                    label: 'Correct %',
+                    data: {correct_pct_per_game_json},
+                    borderColor: '#17a2b8',
+                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#17a2b8',
                 }}]
             }},
             options: {{
@@ -397,7 +462,7 @@ def generate_html(stats):
             data: {{
                 labels: {value_labels_json},
                 datasets: [{{
-                    label: 'Accuracy %',
+                    label: 'Correct %',
                     data: {value_accuracy_json},
                     backgroundColor: 'var(--blue)',
                     borderRadius: 5
@@ -411,25 +476,26 @@ def generate_html(stats):
             }}
         }});
 
-        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-        new Chart(categoryCtx, {{
-            type: 'doughnut',
+        const roundCtx = document.getElementById('roundChart').getContext('2d');
+        const roundData = {round_data_json};
+        const roundLabels = Object.keys(roundData).map(r => r.charAt(0).toUpperCase() + r.slice(1));
+        const roundAccuracy = Object.values(roundData).map(r => r.total > 0 ? r.correct / r.total * 100 : 0);
+        new Chart(roundCtx, {{
+            type: 'bar',
             data: {{
-                labels: {category_names_json},
+                labels: roundLabels,
                 datasets: [{{
-                    data: {category_accuracy_json},
-                    backgroundColor: [
-                        'var(--blue)', 'var(--green)', 'var(--yellow)', '#17a2b8', '#6f42c1',
-                        '#e83e8c', '#fd7e14', '#28a745', '#20c997', '#0dcaf0'
-                    ],
-                    borderColor: 'white',
-                    borderWidth: 2
+                    label: 'Correct %',
+                    data: roundAccuracy,
+                    backgroundColor: ['var(--green)', 'var(--blue)'],
+                    borderRadius: 5
                 }}]
             }},
             options: {{
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {{ legend: {{ position: 'bottom' }} }}
+                plugins: {{ legend: {{ display: false }} }},
+                scales: {{ y: {{ max: 100, beginAtZero: true }} }}
             }}
         }});
     </script>
@@ -441,7 +507,6 @@ def generate_html(stats):
 
 
 def main():
-    """Main entry point."""
     if not GAMES_DIR.exists():
         print(f"Error: {GAMES_DIR} directory not found")
         return
@@ -451,7 +516,7 @@ def main():
     html = generate_html(stats)
 
     OUTPUT_FILE.write_text(html)
-    print(f"✓ Dashboard generated: {OUTPUT_FILE}")
+    print(f"Dashboard generated: {OUTPUT_FILE}")
     print(f"  Games: {stats.get('games_played', 0)}")
     print(f"  Avg Coryat: ${stats.get('avg_coryat', 0):,.0f}")
     print(f"  Accuracy: {stats.get('accuracy_pct', 0):.1f}%")
