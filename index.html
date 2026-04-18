@@ -112,30 +112,35 @@
     <div class="container">
         <header>
             <h1>Jeopardy Dashboard</h1>
-            <p class="timestamp">Last updated: April 18, 2026 at 12:44 AM</p>
+            <p class="timestamp">Last updated: April 18, 2026 at 03:01 AM</p>
         </header>
 
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="label">Games Played</div>
-                <div class="value">3</div>
+                <div class="value">4</div>
             </div>
             <div class="stat-card">
                 <div class="label">Average Coryat</div>
-                <div class="value">$25,400</div>
+                <div class="value">$27,250</div>
             </div>
             <div class="stat-card">
                 <div class="label">Best Coryat</div>
-                <div class="value" style="color: var(--green);">$31,200</div>
-                <div class="sublabel">Apr 04, 2019</div>
+                <div class="value" style="color: var(--green);">$32,800</div>
+                <div class="sublabel">Apr 09, 2019</div>
             </div>
             <div class="stat-card">
                 <div class="label">All-time Correct %</div>
-                <div class="value">88.8%</div>
+                <div class="value">88.3%</div>
             </div>
             <div class="stat-card">
                 <div class="label">Daily Double Record</div>
-                <div class="value">5-0</div>
+                <div class="value">7-1</div>
+                <div class="sublabel">88% correct</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Final Jeopardy Record</div>
+                <div class="value">1-0</div>
                 <div class="sublabel">100% correct</div>
             </div>
         </div>
@@ -179,11 +184,11 @@
         new Chart(coryatCtx, {
             type: 'line',
             data: {
-                labels: ["Apr 04, 2019", "Apr 05, 2019", "Apr 08, 2019"],
+                labels: ["Apr 04, 2019", "Apr 05, 2019", "Apr 08, 2019", "Apr 09, 2019"],
                 datasets: [
                     {
                         label: 'Coryat Score',
-                        data: [31200, 21600, 23400],
+                        data: [31200, 21600, 23400, 32800],
                         borderColor: 'rgba(0, 86, 179, 0.4)',
                         backgroundColor: 'transparent',
                         tension: 0.2,
@@ -192,7 +197,7 @@
                     },
                     {
                         label: '5-Game Average',
-                        data: [31200.0, 26400.0, 25400.0],
+                        data: [31200.0, 26400.0, 25400.0, 27250.0],
                         borderColor: '#0056b3',
                         backgroundColor: 'rgba(0, 86, 179, 0.1)',
                         tension: 0.3,
@@ -214,10 +219,10 @@
         new Chart(correctCountCtx, {
             type: 'line',
             data: {
-                labels: ["Apr 04, 2019", "Apr 05, 2019", "Apr 08, 2019"],
+                labels: ["Apr 04, 2019", "Apr 05, 2019", "Apr 08, 2019", "Apr 09, 2019"],
                 datasets: [{
                     label: 'Correct',
-                    data: [38, 32, 33],
+                    data: [38, 32, 33, 41],
                     borderColor: 'var(--green)',
                     backgroundColor: 'rgba(40, 167, 69, 0.1)',
                     tension: 0.3,
@@ -238,10 +243,10 @@
         new Chart(correctPctCtx, {
             type: 'line',
             data: {
-                labels: ["Apr 04, 2019", "Apr 05, 2019", "Apr 08, 2019"],
+                labels: ["Apr 04, 2019", "Apr 05, 2019", "Apr 08, 2019", "Apr 09, 2019"],
                 datasets: [{
                     label: 'Correct %',
-                    data: [88.4, 82.1, 97.1],
+                    data: [88.4, 82.1, 97.1, 87.2],
                     borderColor: '#17a2b8',
                     backgroundColor: 'rgba(23, 162, 184, 0.1)',
                     tension: 0.3,
@@ -265,7 +270,7 @@
                 labels: ["$200", "$400", "$600", "$800", "$1000", "$1200", "$1600", "$2000"],
                 datasets: [{
                     label: 'Correct %',
-                    data: [61.1, 68.6, 50.0, 69.4, 50.0, 50.0, 44.4, 44.4],
+                    data: [54.2, 74.5, 50.0, 70.8, 45.8, 58.3, 50.0, 54.2],
                     backgroundColor: 'var(--blue)',
                     borderRadius: 5
                 }]
@@ -279,7 +284,7 @@
         });
 
         const roundCtx = document.getElementById('roundChart').getContext('2d');
-        const roundData = {"single": {"correct": 53, "total": 90}, "double": {"correct": 50, "total": 89}};
+        const roundData = {"single": {"correct": 69, "total": 120}, "double": {"correct": 75, "total": 119}, "final": {"correct": 1, "total": 1}};
         const roundLabels = Object.keys(roundData).map(r => r.charAt(0).toUpperCase() + r.slice(1));
         const roundAccuracy = Object.values(roundData).map(r => r.total > 0 ? r.correct / r.total * 100 : 0);
         new Chart(roundCtx, {
