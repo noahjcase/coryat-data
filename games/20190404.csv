@@ -44,7 +44,7 @@ date,round,category,value,result,is_daily_double
 20190404,double,ACCORDING TO THE AUTHOR,1200,c,false
 20190404,double,WORLD WAR II,1200,.,false
 20190404,double,TRANSPORTATION,1200,.,false
-20190404,double,FROM THE GREEK,1200,.,false
+20190404,double,FROM THE GREEK,1200,d.,true
 20190404,double,MUSEUMS,1200,c,false
 20190404,double,SMALL SCREEN SHOW TUNES,1200,.,false
 20190404,double,ACCORDING TO THE AUTHOR,1600,.,false
@@ -54,7 +54,7 @@ date,round,category,value,result,is_daily_double
 20190404,double,MUSEUMS,1600,c,false
 20190404,double,SMALL SCREEN SHOW TUNES,1600,.,false
 20190404,double,ACCORDING TO THE AUTHOR,2000,c,false
-20190404,double,WORLD WAR II,2000,x,false
+20190404,double,WORLD WAR II,2000,dx,true
 20190404,double,TRANSPORTATION,2000,c,false
 20190404,double,FROM THE GREEK,2000,c,false
 20190404,double,MUSEUMS,2000,c,false
