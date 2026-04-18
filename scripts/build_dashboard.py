@@ -7,6 +7,7 @@ Reads from games/ directory and produces index.html.
 import csv
 from pathlib import Path
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from collections import defaultdict
 import json
 
@@ -65,6 +66,7 @@ def calculate_stats(games, game_scores):
     unrevealed_count = 0
     dd_correct = 0
     dd_wrong = 0
+    dd_skipped = 0
     fj_correct = 0
     fj_wrong = 0
     value_accuracy = defaultdict(lambda: {"correct": 0, "total": 0})
@@ -116,6 +118,7 @@ def calculate_stats(games, game_scores):
                 game_answered += 1
             elif result == "d.":
                 skipped_count += 1
+                dd_skipped += 1
 
             value_accuracy[value]["total"] += 1
             if result in ("c", "dc"):
@@ -134,6 +137,7 @@ def calculate_stats(games, game_scores):
     best_date = max(game_scores, key=game_scores.get)
 
     fj_total = fj_correct + fj_wrong
+    dd_total = dd_correct + dd_wrong + dd_skipped
     stats = {
         "games_played": len(games),
         "avg_coryat": round(sum(coryats) / len(coryats), 0),
@@ -145,9 +149,9 @@ def calculate_stats(games, game_scores):
         "skipped": skipped_count,
         "unrevealed": unrevealed_count,
         "accuracy_pct": round(100 * correct_count / total_answered, 1) if total_answered > 0 else 0,
-        "dd_record": f"{dd_correct}-{dd_wrong}",
-        "dd_correct_pct": round(100 * dd_correct / (dd_correct + dd_wrong), 1) if (dd_correct + dd_wrong) > 0 else 0,
-        "fj_record": f"{fj_correct}-{fj_wrong}",
+        "dd_record": f"{dd_correct}/{dd_total}",
+        "dd_correct_pct": round(100 * dd_correct / dd_total, 1) if dd_total > 0 else 0,
+        "fj_record": f"{fj_correct}/{fj_total}",
         "fj_correct_pct": round(100 * fj_correct / fj_total, 1) if fj_total > 0 else 0,
         "value_accuracy": dict(value_accuracy),
         "round_accuracy": dict(round_accuracy),
@@ -330,7 +334,7 @@ def generate_html(stats):
     <div class="container">
         <header>
             <h1>Jeopardy Dashboard</h1>
-            <p class="timestamp">Last updated: {datetime.now().strftime("%B %d, %Y at %I:%M %p")}</p>
+            <p class="timestamp">Last updated: {datetime.now(ZoneInfo("America/New_York")).strftime("%B %d, %Y at %I:%M %p ET")}</p>
         </header>
 
         <div class="stats-grid">
