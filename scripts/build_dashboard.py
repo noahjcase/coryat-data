@@ -65,6 +65,8 @@ def calculate_stats(games, game_scores):
     unrevealed_count = 0
     dd_correct = 0
     dd_wrong = 0
+    fj_correct = 0
+    fj_wrong = 0
     value_accuracy = defaultdict(lambda: {"correct": 0, "total": 0})
     round_accuracy = defaultdict(lambda: {"correct": 0, "total": 0})
 
@@ -81,6 +83,17 @@ def calculate_stats(games, game_scores):
 
             if result == "u":
                 unrevealed_count += 1
+                continue
+
+            # FJ: track separately and include in round_accuracy; exclude from overall stats
+            if round_name == "final":
+                if result in ("c", "x"):
+                    round_accuracy[round_name]["total"] += 1
+                    if result == "c":
+                        round_accuracy[round_name]["correct"] += 1
+                        fj_correct += 1
+                    else:
+                        fj_wrong += 1
                 continue
 
             if result == "c":
@@ -120,6 +133,7 @@ def calculate_stats(games, game_scores):
     total_answered = correct_count + wrong_count
     best_date = max(game_scores, key=game_scores.get)
 
+    fj_total = fj_correct + fj_wrong
     stats = {
         "games_played": len(games),
         "avg_coryat": round(sum(coryats) / len(coryats), 0),
@@ -133,6 +147,8 @@ def calculate_stats(games, game_scores):
         "accuracy_pct": round(100 * correct_count / total_answered, 1) if total_answered > 0 else 0,
         "dd_record": f"{dd_correct}-{dd_wrong}",
         "dd_correct_pct": round(100 * dd_correct / (dd_correct + dd_wrong), 1) if (dd_correct + dd_wrong) > 0 else 0,
+        "fj_record": f"{fj_correct}-{fj_wrong}",
+        "fj_correct_pct": round(100 * fj_correct / fj_total, 1) if fj_total > 0 else 0,
         "value_accuracy": dict(value_accuracy),
         "round_accuracy": dict(round_accuracy),
         "coryat_history": [game_scores[game["date"]] for game in games],
@@ -168,6 +184,8 @@ def generate_html(stats):
             "accuracy_pct": 0,
             "dd_record": "0-0",
             "dd_correct_pct": 0,
+            "fj_record": "0-0",
+            "fj_correct_pct": 0,
             "value_accuracy": {},
             "round_accuracy": {},
             "coryat_history": [],
@@ -337,6 +355,11 @@ def generate_html(stats):
                 <div class="label">Daily Double Record</div>
                 <div class="value">{stats.get('dd_record', '0-0')}</div>
                 <div class="sublabel">{stats.get('dd_correct_pct', 0):.0f}% correct</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Final Jeopardy Record</div>
+                <div class="value">{stats.get('fj_record', '0-0')}</div>
+                <div class="sublabel">{stats.get('fj_correct_pct', 0):.0f}% correct</div>
             </div>
         </div>
 
